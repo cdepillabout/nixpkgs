@@ -47,7 +47,11 @@ stdenv.mkDerivation rec {
     (substituteAll {
       src = ./absolute_gir_path.patch;
       cairoLib = "${getLib cairo}/lib";
-    });
+    })
+    # Prevent scanner from erroneously including @rpath on macOS
+    # This patch is from https://gitlab.gnome.org/GNOME/gobject-introspection/issues/222
+    # See also https://github.com/NixOS/nixpkgs/issues/40599
+    ++ [ ./macos-absolutize-relocatable-install-name.patch ];
 
   doCheck = false; # fails
 
