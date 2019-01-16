@@ -4,6 +4,7 @@
 , openresolv
 , systemd, pam
 , curl
+, kmod
 , enableTNC            ? false, trousers, sqlite, libxml2
 , enableNetworkManager ? false, networkmanager
 }:
@@ -60,6 +61,9 @@ stdenv.mkDerivation rec {
     substituteInPlace src/swanctl/swanctl.h --replace "SWANCTLDIR" "\"/etc/swanctl\""
     # glibc-2.26 reorganized internal includes
     sed '1i#include <stdint.h>' -i src/libstrongswan/utils/utils/memory.h
+
+    substituteInPlace src/starter/netkey.c --replace 'modprobe ' '${kmod}/bin/modprobe '
+    substituteInPlace src/starter/klips.c --replace 'modprobe ' '${kmod}/bin/modprobe '
     '';
 
   preConfigure = ''
