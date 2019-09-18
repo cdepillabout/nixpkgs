@@ -2525,9 +2525,12 @@ extra-packages:
   - seqid < 0.2                         # newer versions depend on transformers 0.4.x which we cannot provide in GHC 7.8.x
   - seqid-streams < 0.2                 # newer versions depend on transformers 0.4.x which we cannot provide in GHC 7.8.x
   - split < 0.2                         # newer versions don't work with GHC 6.12.3
+  - swagger2 < 2.4                      # required for proto3-suite
   - tar < 0.4.2.0                       # later versions don't work with GHC < 7.6.x
   - these == 0.7.6                      # required by hnix 0.6.1
   - transformers == 0.4.3.*             # the latest version isn't supported by mtl yet
+  - tree-sitter == 0.2.0.0              # required by semantic-python
+  - tree-sitter-python == 0.2.0.0       # required by semantic-python
   - vector < 0.10.10                    # newer versions don't work with GHC 6.12.3
   - xml-conduit ^>= 1.7                 # pre-lts-11.x versions neeed by git-annex 6.20180227
   - yesod ^>= 1.4                       # pre-lts-11.x versions neeed by git-annex 6.20180227
@@ -2847,7 +2850,6 @@ broken-packages:
   - algebra
   - algebra-sql
   - algebraic
-  - algebraic-graphs
   - algebraic-prelude
   - algo-s
   - AlgoRhythm
@@ -9276,7 +9278,6 @@ broken-packages:
   - streaming-fft
   - streaming-png
   - streaming-postgresql-simple
-  - streaming-process
   - streaming-sort
   - strelka
   - strict-data
@@ -9680,13 +9681,11 @@ broken-packages:
   - travis-meta-yaml
   - trawl
   - traypoweroff
-  - tree-sitter
   - tree-sitter-go
   - tree-sitter-haskell
   - tree-sitter-java
   - tree-sitter-json
   - tree-sitter-php
-  - tree-sitter-python
   - tree-sitter-ruby
   - tree-sitter-tsx
   - tree-sitter-typescript

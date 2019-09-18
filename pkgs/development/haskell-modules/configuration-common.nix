@@ -1228,4 +1228,44 @@ self: super: {
     '';
   });
 
+  # tests appear to be broken
+  algebraic-graphs = dontCheck super.algebraic-graphs;
+
+  # Cabal file requires old version of hspec, but it doesn't actually need it.
+  streaming-process = doJailbreak super.streaming-process;
+
+  # Requests old version of algebraic-graphs and haskeline, but doesn't
+  # actually require it.  doctests also appear to be broken.
+  semantic-core = dontCheck (doJailbreak super.semantic-core);
+
+  # Tests require jq, so disable for now.
+  semantic-python =
+    dontCheck
+      (super.semantic-python.override {
+        tree-sitter = self.tree-sitter_0_2_0_0;
+        tree-sitter-python = self.tree-sitter-python_0_2_0_0;
+      });
+
+  semantic-github = super.semantic-github.override {
+    tree-sitter = self.tree-sitter_0_2_0_0;
+    tree-sitter-python = self.tree-sitter-python_0_2_0_0;
+  };
+
+  # tests appear to be automatically generated and broken
+  tree-sitter-python_0_2_0_0 = dontCheck (super.tree-sitter-python_0_2_0_0.override {
+    tree-sitter = self.tree-sitter_0_2_0_0;
+  });
+
+  # Requests old version of hspec.
+  tree-sitter_0_2_0_0 = doJailbreak super.tree-sitter_0_2_0_0;
+
+  # Requests old hspec.
+  semilattices = doJailbreak super.semilattices;
+
+  # Requests old quickcheck and tasty.
+  # Tests require dhall support to be turned-on to work.
+  proto3-suite = dontCheck (doJailbreak (super.proto3-suite.override {
+    swagger2 = self.swagger2_2_3_1_1;
+  }));
+
 } // import ./configuration-tensorflow.nix {inherit pkgs haskellLib;} self super
