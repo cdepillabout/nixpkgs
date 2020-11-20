@@ -323,6 +323,7 @@ in package-set { inherit pkgs stdenv callPackage; } self // {
         # packages.  You should set this to true if you have benchmarks defined
         # in your local packages that you want to be able to run with cabal benchmark
         doBenchmark ? false
+      , modifier ? (virtualDrv: virtualDrv)
       , ...
       } @ args:
       let
@@ -439,26 +440,37 @@ in package-set { inherit pkgs stdenv callPackage; } self // {
         # This is a derivation created with `haskellPackages.mkDerivation`.
         #
         # pkgWithCombinedDeps :: HaskellDerivation
-        pkgWithCombinedDeps = self.mkDerivation genericBuilderArgs;
+        pkgWithCombinedDeps =
+          let x = 
+                callPackage
+                  ({ mkDerivation }: self.mkDerivation genericBuilderArgs)
+                  {};
+          in builtins.trace ("in shellFor, pkgWithCombinedDeps, x.doCheck: ${if x.doCheck then "true" else "false"}") x;
 
-        # The derivation returned from `envFunc` for `pkgWithCombinedDeps`.
-        #
-        # This is a derivation that can be run with `nix-shell`.  It provides a
-        # GHC with a package database with all the dependencies of our
-        # `selected` packages.
-        #
-        # This is a derivation created with `stdenv.mkDerivation` (not
-        # `haskellPackages.mkDerivation`).
-        #
-        # pkgWithCombinedDepsDevDrv :: Derivation
-        pkgWithCombinedDepsDevDrv = pkgWithCombinedDeps.envFunc { inherit withHoogle; };
+        modifiedPkgWithCombinedDeps =
+          let x = modifier pkgWithCombinedDeps;
+          in builtins.trace ("in shellFor, modifiedPkgWithCombinedDeps, x.doCheck: ${if x.doCheck then "true" else "false"}") x;
 
-        mkDerivationArgs = builtins.removeAttrs args [ "packages" "withHoogle" "doBenchmark" ];
+      in modifiedPkgWithCombinedDeps;
 
-      in pkgWithCombinedDepsDevDrv.overrideAttrs (old: mkDerivationArgs // {
-        nativeBuildInputs = old.nativeBuildInputs ++ mkDerivationArgs.nativeBuildInputs or [];
-        buildInputs = old.buildInputs ++ mkDerivationArgs.buildInputs or [];
-      });
+        ## The derivation returned from `envFunc` for `modifiedPkgWithCombinedDeps`.
+        ##
+        ## This is a derivation that can be run with `nix-shell`.  It provides a
+        ## GHC with a package database with all the dependencies of our
+        ## `selected` packages.
+        ##
+        ## This is a derivation created with `stdenv.mkDerivation` (not
+        ## `haskellPackages.mkDerivation`).
+        ##
+        ## pkgWithCombinedDepsDevDrv :: Derivation
+        #pkgWithCombinedDepsDevDrv = modifiedPkgWithCombinedDeps.envFunc { inherit withHoogle; };
+
+        #mkDerivationArgs = builtins.removeAttrs args [ "packages" "withHoogle" "modifier" "doBenchmark" ];
+
+      #in pkgWithCombinedDepsDevDrv.overrideAttrs (old: mkDerivationArgs // {
+        #nativeBuildInputs = old.nativeBuildInputs ++ mkDerivationArgs.nativeBuildInputs or [];
+        #buildInputs = old.buildInputs ++ mkDerivationArgs.buildInputs or [];
+      #});
 
     ghc = ghc // {
       withPackages = self.ghcWithPackages;

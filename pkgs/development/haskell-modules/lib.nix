@@ -34,11 +34,42 @@ rec {
          "https://github.com/bos/aeson#readme"
 
    */
-  overrideCabal = drv: f: (drv.override (args: args // {
-    mkDerivation = drv: (args.mkDerivation drv).override f;
-  })) // {
-    overrideScope = scope: overrideCabal (drv.overrideScope scope) f;
-  };
+  overrideCabal = drv: f:
+    let
+      overriddenMkDerivation =
+        drv.override
+          ( args:
+              let
+                # initialArgs = builtins.trace ("overrideCabal, inner drv.override, drv.pname: ${drv.pname}, initialArgs:") (builtins.trace args args);
+                initialArgs = args;
+
+                resultArgs =
+                  # initialArgs // {
+                  #   mkDerivation = drv: (initialArgs.mkDerivation drv).override f;
+                  # };
+                  {
+                    mkDerivation = drv':
+                      builtins.trace ("overrideCabal, inner drv.override, new mkDerivation, drv.pname: ${drv.pname}, f {}:") (
+                      builtins.trace (f {}) (
+                      builtins.trace ("!!!!!!!! overrideCabal, inner drv.override, new mkDerivation, drv'.pname: ${drv'.pname}, drv'.doCheck: ${if drv' ? doCheck then ( if drv'.doCheck then "true" else "false") else "NO doCheck"}") (
+                      (initialArgs.mkDerivation drv').override f
+                      )
+                      )
+                      )
+                      ;
+                  };
+              in
+              builtins.trace ("overrideCabal, inner drv.override, drv.pname: ${drv.pname}, resultArgs:") (builtins.trace resultArgs resultArgs)
+          );
+    in
+    builtins.trace "overrideCabal, drv.pname: ${drv.pname}, input drv.doCheck: ${if drv.doCheck then "true" else "false"}" (
+    builtins.trace "overrideCabal, drv.pname: ${drv.pname}, output overriddenMkDerivation.doCheck: ${if overriddenMkDerivation.doCheck then "true" else "false"}" (
+    overriddenMkDerivation // {
+      overrideScope = scope: overrideCabal (drv.overrideScope scope) f;
+    }
+    )
+    )
+    ;
 
   # : Map Name (Either Path VersionNumber) -> HaskellPackageOverrideSet
   # Given a set whose values are either paths or version strings, produces

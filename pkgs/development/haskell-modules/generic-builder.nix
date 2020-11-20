@@ -86,6 +86,8 @@ in
   enableLibraryForGhci ? false
 } @ args:
 
+(if pname == "repro" then builtins.trace "generic-builder.nix, pname: ${pname}, doCheck: ${if doCheck then "true" else "false"}" else stdenv.lib.id) (
+
 assert editedCabalFile != null -> revision != null;
 
 # --enable-static does not work on windows. This is a bug in GHC.
@@ -669,5 +671,6 @@ stdenv.mkDerivation ({
 // optionalAttrs (args ? dontStrip)              { inherit dontStrip; }
 // optionalAttrs (args ? hardeningDisable)       { inherit hardeningDisable; }
 // optionalAttrs (stdenv.buildPlatform.libc == "glibc"){ LOCALE_ARCHIVE = "${glibcLocales}/lib/locale/locale-archive"; }
+)
 )
 )
