@@ -54,68 +54,89 @@ let
         touch "$out"
       '';
 
-  tryFetch = url:
-    let
-      cacheVal =
-        let
-          urlHash = builtins.hashString "sha256" url;
-          timeSlice = builtins.currentTime;
-        in "${urlHash}-${toString timeSlice}";
+  downloadBitNum =
+    { url, urlHash, bitNum, bitNumStr }:
+      let
+        byteNum = bitNum / 8;
+        byteNumStr = toString byteNum;
+        bitInByteNum = lib.mod bitNum 8;
+      in
+      stdenv.mkDerivation
+        {
+          name = "tryfetch-${urlHash}-${bitNumStr}";
+          inherit url;
 
-    in
-    {
-      bitValue =
-        import
-          (runCommand
-            "check-success"
-            {
-              result = stdenv.mkDerivation {
-                name = "tryfetch-${cacheVal}";
-                inherit url;
+          outputHash = "d00bbe65d80f6d53d5c15da7c6b4f0a655c5a86a";
+          outputHashMode = "flat";
+          outputHashAlgo = "sha1";
 
-                outputHash = "d00bbe65d80f6d53d5c15da7c6b4f0a655c5a86a";
-                outputHashMode = "flat";
-                outputHashAlgo = "sha1";
+          nativeBuildInputs = [ curl xxd ];
+          preferLocalBuild = true;
 
-                nativeBuildInputs = [ curl xxd ];
-                preferLocalBuild = true;
+          inherit (collisions) bitValue1Pdf bitValue0Pdf;
 
-                inherit (collisions) bitValue1Pdf bitValue0Pdf;
-
-                buildCommand = ''
-                  if SSL_CERT_FILE="${cacert}/etc/ssl/certs/ca-bundle.crt" curl -s -L -f -I "$url" > downloaded_file; then
-                    first_char="$(dd if=downloaded_file bs=1 count=1 status=none | xxd -b | cut -d' ' -f2 | head -c1)"
-                    if [ "$first_char" == "1" ]; then
-                      cp "$bitValue1Pdf" "$out"
-                    else
-                      cp "$bitValue0Pdf" "$out"
-                    fi
-                  else
-                    exit 1
-                  fi
-                '';
-
-                impureEnvVars = lib.fetchers.proxyImpureEnvVars;
-              };
-
-              inherit (collisions) bitValue1Pdf;
-            }
-            ''
-              if cmp -s "$result" "$bitValue1Pdf"; then
-                echo 1 > "$out"
+          buildCommand = ''
+            echo "Trying to download bitNum ${bitNumStr} which is bit ${toString bitInByteNum} in byteNum ${byteNumStr} for url: ${url}"
+            curl=(
+              curl
+              --location
+              --max-redirs 20
+              --retry 3
+              --disable-epsv
+              --cookie-jar cookies
+              --user-agent "curl evil-nix"
+              --insecure
+            )
+            if SSL_CERT_FILE="${cacert}/etc/ssl/certs/ca-bundle.crt" "''${curl[@]}" "$url" > ./downloaded_file; then
+              set -x
+              cat ./downloaded_file
+              dd if=downloaded_file bs=1 count=1 skip=${byteNumStr} status=none | xxd -b
+              first_char="$(dd if=downloaded_file bs=1 count=1 skip=${byteNumStr} status=none | xxd -b | cut -d' ' -f2 | tail -c +${toString (bitInByteNum + 1)} | head -c1)"
+              echo $first_char
+              set +x
+              if [ "$first_char" == "1" ]; then
+                cp "$bitValue1Pdf" "$out"
+              elif [ "$first_char" == "0" ]; then
+                cp "$bitValue0Pdf" "$out"
               else
-                echo 0 > "$out"
+                echo "Got unexpected bit value: $first_char"
+                exit 1
               fi
-            ''
-          );
-    };
+            else
+              echo "Failed to download file"
+              exit 1
+            fi
+          '';
+
+          impureEnvVars = lib.fetchers.proxyImpureEnvVars;
+        };
+
+  tryFetch = url: bitNum:
+    let
+      urlHash = builtins.hashString "sha256" url;
+      bitNumStr = toString bitNum;
+    in
+    runCommand
+      "bitvalue-${urlHash}-${bitNumStr}"
+      {
+        result = downloadBitNum { inherit url urlHash bitNum bitNumStr; };
+        inherit (collisions) bitValue1Pdf;
+      }
+      ''
+        if cmp -s "$result" "$bitValue1Pdf"; then
+          echo 1 > "$out"
+        else
+          echo 0 > "$out"
+        fi
+      '';
 
   myurl = "https://raw.githubusercontent.com/WinMerge/winmerge/66e2ce0986d9a491a0b0ca1fe18df65c9b7b3cfd/Testing/Data/Compare1/Dir2/file2_1.txt";
 
-  myresult = tryFetch myurl;
+  myresult = tryFetch myurl 7;
 
+  myresultForBit = { bitValue }: tryFetch myurl bitValue;
 in
 
 {
-  inherit tryFetch myresult;
+  inherit tryFetch myresult myresultForBit;
 }
